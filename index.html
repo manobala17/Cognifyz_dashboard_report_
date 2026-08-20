@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cognifyz Restaurant Data Analysis Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#07111f;--card:rgba(14,27,48,.82);--line:rgba(255,255,255,.12);
+  --text:#f7fbff;--muted:#9fb0c8;--cyan:#22d3ee;--blue:#4f8cff;
+  --purple:#a855f7;--pink:#ec4899;--green:#22c55e;--orange:#f59e0b;
+}
+body{
+  font-family:Inter,Arial,Helvetica,sans-serif;
+  background:
+    radial-gradient(circle at 10% 0%,rgba(79,140,255,.20),transparent 28%),
+    radial-gradient(circle at 90% 10%,rgba(168,85,247,.18),transparent 25%),
+    linear-gradient(135deg,#050b16,#0b1730 50%,#08101e);
+  color:var(--text);min-height:100vh;
+}
+.container{max-width:1500px;margin:auto;padding:20px}
+header{
+  position:relative;overflow:hidden;
+  background:linear-gradient(135deg,rgba(17,34,62,.94),rgba(25,16,54,.88));
+  border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:26px;
+  margin-bottom:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);
+}
+header:after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;
+  right:-45px;top:-70px;background:linear-gradient(135deg,var(--cyan),var(--purple));opacity:.22;filter:blur(8px)}
+header h1{
+  font-size:31px;margin-bottom:7px;
+  background:linear-gradient(90deg,#67e8f9,#60a5fa,#c084fc,#f472b6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+header p{color:#b9c8dd;font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0}
+.tab{
+  padding:11px 18px;border:1px solid var(--line);border-radius:999px;
+  background:rgba(255,255,255,.055);color:#cbd7e8;cursor:pointer;
+  transition:.25s ease;font-weight:600;backdrop-filter:blur(10px)
+}
+.tab:hover{transform:translateY(-2px);border-color:#60a5fa;color:#fff}
+.tab.active{
+  background:linear-gradient(90deg,var(--blue),var(--purple));
+  color:#fff;border-color:transparent;box-shadow:0 8px 24px rgba(79,140,255,.3)
+}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:16px}
+.kpi{
+  min-height:112px;padding:15px;background:linear-gradient(145deg,rgba(20,39,67,.9),rgba(10,22,40,.9));
+  border:1px solid var(--line);border-radius:20px;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;position:relative;overflow:hidden;
+  transition:.25s ease;box-shadow:0 10px 28px rgba(0,0,0,.18)
+}
+.kpi:before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;
+  background:linear-gradient(90deg,var(--cyan),var(--blue),var(--purple),var(--pink))}
+.kpi:hover{transform:translateY(-4px);box-shadow:0 16px 35px rgba(0,0,0,.28)}
+.kpi .label{font-size:12px;color:#67e8f9;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+.kpi .value{font-size:25px;font-weight:800}
+.kpi .sub{font-size:11px;color:var(--muted);margin-top:6px}
+.section{display:none;animation:fade .3s ease}
+.section.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.panel{
+  background:linear-gradient(145deg,rgba(13,29,52,.9),rgba(8,18,34,.92));
+  border:1px solid var(--line);border-radius:22px;min-height:360px;overflow:hidden;
+  box-shadow:0 12px 34px rgba(0,0,0,.20);transition:.25s ease
+}
+.panel:hover{border-color:rgba(96,165,250,.35);box-shadow:0 16px 42px rgba(0,0,0,.27)}
+.panel.full{grid-column:1/-1}
+.panel h2{
+  font-size:17px;text-align:left;padding:15px 17px;
+  border-bottom:1px solid var(--line);color:#e9f2ff;
+  background:linear-gradient(90deg,rgba(79,140,255,.09),transparent)
+}
+.chart{height:315px;padding:10px}
+.note{
+  margin:12px;padding:14px 16px;border-left:4px solid var(--cyan);
+  border-radius:10px;background:rgba(34,211,238,.055);color:#b8c7db;
+  line-height:1.6;font-size:13px
+}
+.table-wrap{padding:12px;overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+th{color:#67e8f9}
+tr{transition:.2s} tr:hover{background:rgba(79,140,255,.08)}
+.badge{display:inline-block;padding:5px 9px;border-radius:12px;background:linear-gradient(90deg,var(--blue),var(--purple));font-size:11px}
+footer{text-align:center;color:#71829b;padding:22px 0 5px;font-size:12px}
+@media(max-width:1000px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){
+  .container{padding:9px}.kpis{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr}.panel.full{grid-column:auto}header h1{font-size:22px}
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<header>
+  <h1>Cognifyz Restaurant Data Analysis</h1>
+  <p>Power BI project converted into an interactive HTML dashboard • Level 1 & Level 2 analysis</p><div id="liveStatus" style="margin-top:10px;color:#67e8f9;font-size:12px;font-weight:700">● LIVE DASHBOARD</div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" onclick="showSection('overview',this)">Overview</button>
+  <button class="tab" onclick="showSection('level1',this)">Level 1</button>
+  <button class="tab" onclick="showSection('level2',this)">Level 2</button>
+  <button class="tab" onclick="showSection('chains',this)">Restaurant Chains</button>
+</div>
+
+<!-- OVERVIEW -->
+<section id="overview" class="section active">
+
+  <div class="kpis">
+    <div class="kpi">
+      <div class="label">Total Restaurants</div>
+      <div class="value">9,551</div>
+      <div class="sub">Reported restaurant total</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Top City</div>
+      <div class="value">New Delhi</div>
+      <div class="sub">5,473 restaurants</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Top Cuisine</div>
+      <div class="value">North Indian</div>
+      <div class="sub">3,960 restaurants</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Avg Votes</div>
+      <div class="value">156.9</div>
+      <div class="sub">Per restaurant</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Delivery</div>
+      <div class="value">25.66%</div>
+      <div class="sub">Offer online delivery</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Top Cuisines</h2>
+      <div class="chart"><canvas id="overviewCuisine"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Price Range Distribution</h2>
+      <div class="chart"><canvas id="overviewPrice"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Online Delivery</h2>
+      <div class="chart"><canvas id="overviewDelivery"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Average Rating: Delivery vs No Delivery</h2>
+      <div class="chart"><canvas id="overviewRating"></canvas></div>
+    </div>
+
+    <div class="panel full">
+      <h2>Project Summary</h2>
+      <div class="note">
+        The analysis identifies North Indian, Chinese and Fast Food as the top three cuisines.
+        New Delhi has the largest restaurant volume with 5,473 restaurants. Nearly half of the
+        restaurants are in price range 1, while premium price range 4 is the smallest segment.
+        Restaurants offering online delivery have a higher average rating than restaurants without delivery.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LEVEL 1 -->
+<section id="level1" class="section">
+  <div class="grid">
+
+    <div class="panel">
+      <h2>Task 1 — Top Cuisines</h2>
+      <div class="chart"><canvas id="cuisineChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 2 — City Analysis</h2>
+      <div class="chart"><canvas id="cityChart"></canvas></div>
+      <div class="note">
+        New Delhi has 5,473 restaurants. Among cities with meaningful restaurant volume
+        (5+ listings), London has the highest average rating at 4.54.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 3 — Price Range</h2>
+      <div class="chart"><canvas id="priceChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 4 — Online Delivery</h2>
+      <div class="chart"><canvas id="deliveryChart"></canvas></div>
+    </div>
+
+    <div class="panel full">
+      <h2>Level 1 Findings</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Analysis</th><th>Finding</th></tr></thead>
+          <tbody>
+            <tr><td>Top cuisines</td><td>North Indian, Chinese and Fast Food</td></tr>
+            <tr><td>Largest city</td><td>New Delhi — 5,473 restaurants</td></tr>
+            <tr><td>Highest meaningful city rating</td><td>London — 4.54 average rating, using 5+ listings</td></tr>
+            <tr><td>Largest price segment</td><td>Price Range 1 — 46.53%</td></tr>
+            <tr><td>Smallest price segment</td><td>Price Range 4 — 6.14%</td></tr>
+            <tr><td>Online delivery</td><td>25.66% offer delivery; 74.34% do not</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- LEVEL 2 -->
+<section id="level2" class="section">
+  <div class="grid">
+
+    <div class="panel">
+      <h2>Task 1 — Restaurant Ratings</h2>
+      <div class="chart"><canvas id="ratingDistribution"></canvas></div>
+      <div class="note">
+        Average votes per restaurant: 156.9. The report notes a large spike at 0.0
+        for unrated restaurants and a roughly normal spread from 2.5 to 4.5 among rated restaurants.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 2 — Cuisine Combinations</h2>
+      <div class="chart"><canvas id="combinationChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 3 — Geographic Analysis</h2>
+      <div id="map" style="width:100%;height:315px"></div>
+      <div class="note">
+        The report describes a Latitude/Longitude scatter map covering multiple countries and
+        continents, with dense clusters around major cities such as New Delhi. The exact
+        country-level counts are not included in the report, so this panel shows the reported
+        New Delhi point without inventing additional values.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Task 4 — Restaurant Chains</h2>
+      <div class="chart"><canvas id="chainChart"></canvas></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CHAINS -->
+<section id="chains" class="section">
+  <div class="panel">
+    <h2>Restaurant Chain Performance</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Chain</th><th>Outlets</th><th>Avg Rating</th><th>Avg Votes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="badge">Cafe Coffee Day</span></td><td>83</td><td>2.42</td><td>29</td></tr>
+          <tr><td>Domino's Pizza</td><td>79</td><td>2.74</td><td>84</td></tr>
+          <tr><td>Subway</td><td>63</td><td>2.91</td><td>97</td></tr>
+          <tr><td>Green Chick Chop</td><td>51</td><td>2.67</td><td>19</td></tr>
+          <tr><td>McDonald's</td><td>48</td><td>3.34</td><td>110</td></tr>
+          <tr><td>Keventers</td><td>34</td><td>2.87</td><td>37</td></tr>
+          <tr><td>Pizza Hut</td><td>30</td><td>3.32</td><td>165</td></tr>
+          <tr><td><span class="badge">Barbeque Nation</span></td><td>26</td><td>4.35</td><td>1,082</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:12px">
+    <div class="panel">
+      <h2>Outlets by Chain</h2>
+      <div class="chart"><canvas id="outletChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Average Rating by Chain</h2>
+      <div class="chart"><canvas id="chainRatingChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="note">
+    Cafe Coffee Day has the most outlets (83). Barbeque Nation has the highest average rating
+    (4.35) and the highest average votes per restaurant (1,082) among the listed chains.
+  </div>
+</section>
+
+<footer>
+  Cognifyz Data Analysis Internship • Restaurant Dataset • HTML Dashboard
+</footer>
+</div>
+
+<script>
+const PALETTE=["#22d3ee","#4f8cff","#a855f7","#ec4899","#22c55e","#f59e0b","#f97316","#14b8a6"];
+const BLUE="#4f8cff";
+const DARKBLUE="#1733a6";
+const CYAN="#22d3ee";
+const GRID="rgba(180,200,230,.13)";
+Chart.defaults.color="#dbeafe";
+Chart.defaults.font.family="Inter,Arial,Helvetica,sans-serif";
+Chart.defaults.animation.duration=900;
+
+function baseOptions(horizontal=false){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    indexAxis:horizontal?"y":"x",
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:GRID}},
+      y:{grid:{color:GRID}}
+    }
+  };
+}
+
+function makeChart(id,type,labels,data,opts={}){
+  const ctx=document.getElementById(id);
+  const colors=opts.colors||PALETTE.slice(0,Math.max(1,labels.length));
+  const bg=Array.isArray(colors)?colors:(type==="line"?colors:colors);
+  return new Chart(ctx,{
+    type,
+    data:{labels,datasets:[{
+      label: opts.label||"Restaurants",
+      data,
+      backgroundColor:bg,
+      borderColor:Array.isArray(bg)?bg[0]:bg,
+      borderWidth: type==="line" ? 3 : 1,
+      fill:opts.fill||false,
+      tension:.35,
+      pointRadius:type==="line"?4:3,
+      pointHoverRadius:7
+    }]},
+    options:{
+      ...baseOptions(opts.horizontal),
+      interaction:{mode:"index",intersect:false},
+      plugins:{
+        legend:{display:false},
+        tooltip:{enabled:true,backgroundColor:"rgba(5,12,25,.94)",titleColor:"#fff",
+          bodyColor:"#dbeafe",borderColor:"rgba(96,165,250,.4)",borderWidth:1,padding:10}
+      },
+      ...opts.options
+    }
+  });
+}
+
+/* Overview */
+makeChart("overviewCuisine","bar",
+  ["North Indian","Chinese","Fast Food"],
+  [3960,2735,1986],
+  {horizontal:true,options:{scales:{x:{beginAtZero:true},y:{grid:{display:false}}}}}
+);
+
+makeChart("overviewPrice","doughnut",
+  ["Range 1","Range 2","Range 3","Range 4"],
+  [4444,3113,1408,586],
+  {colors:[DARKBLUE,BLUE,CYAN,"#777"]}
+);
+
+makeChart("overviewDelivery","doughnut",
+  ["Offers Online Delivery","No Online Delivery"],
+  [25.66,74.34],
+  {colors:[CYAN,DARKBLUE]}
+);
+
+makeChart("overviewRating","bar",
+  ["Online Delivery","No Online Delivery"],
+  [3.25,2.47],
+  {options:{scales:{y:{beginAtZero:true,max:5}}}}
+);
+
+/* Level 1 */
+makeChart("cuisineChart","bar",
+  ["North Indian","Chinese","Fast Food"],
+  [3960,2735,1986],
+  {horizontal:true,options:{scales:{x:{beginAtZero:true},y:{grid:{display:false}}}}}
+);
+
+makeChart("cityChart","bar",
+  ["New Delhi","London"],
+  [5473,5],
+  {colors:[BLUE,CYAN],options:{scales:{y:{beginAtZero:true}}}}
+);
+
+makeChart("priceChart","bar",
+  ["1 Budget","2","3","4 Premium"],
+  [4444,3113,1408,586],
+  {options:{scales:{y:{beginAtZero:true}}}}
+);
+
+makeChart("deliveryChart","doughnut",
+  ["Offers Delivery","No Delivery"],
+  [25.66,74.34],
+  {colors:[CYAN,DARKBLUE]}
+);
+
+/* Level 2 */
+makeChart("ratingDistribution","bar",
+  ["0.0","2.5–3.0","3.0–3.5","3.5–4.0","4.0–4.5","4.5+"],
+  [1,1,1,1,1,1],
+  {
+    colors:[DARKBLUE,BLUE,BLUE,CYAN,CYAN,BLUE],
+    options:{
+      plugins:{tooltip:{callbacks:{
+        label:()=> "Report describes distribution; exact bin counts are not provided."
+      }}},
+      scales:{y:{display:false}}
+    }
+  }
+);
+
+makeChart("combinationChart","bar",
+  [
+    "North Indian",
+    "North Indian, Chinese",
+    "Chinese",
+    "Fast Food",
+    "North Indian, Mughlai",
+    "Cafe"
+  ],
+  [936,511,354,354,334,299],
+  {
+    horizontal:true,
+    options:{scales:{x:{beginAtZero:true},y:{grid:{display:false}}}}
+  }
+);
+
+makeChart("chainChart","bar",
+  ["Cafe Coffee Day","Domino's","Subway","Green Chick Chop","McDonald's","Keventers","Pizza Hut","Barbeque Nation"],
+  [83,79,63,51,48,34,30,26],
+  {
+    horizontal:true,
+    options:{scales:{x:{beginAtZero:true},y:{grid:{display:false}}}}
+  }
+);
+
+/* Chain section */
+makeChart("outletChart","bar",
+  ["Cafe Coffee Day","Domino's","Subway","Green Chick Chop","McDonald's","Keventers","Pizza Hut","Barbeque Nation"],
+  [83,79,63,51,48,34,30,26],
+  {horizontal:true,options:{scales:{x:{beginAtZero:true},y:{grid:{display:false}}}}}
+);
+
+makeChart("chainRatingChart","bar",
+  ["Cafe Coffee Day","Domino's","Subway","Green Chick Chop","McDonald's","Keventers","Pizza Hut","Barbeque Nation"],
+  [2.42,2.74,2.91,2.67,3.34,2.87,3.32,4.35],
+  {horizontal:true,options:{scales:{x:{beginAtZero:true,max:5},y:{grid:{display:false}}}}}
+);
+
+/* Geographic visual — only the location explicitly highlighted by the report.
+   Exact country/city counts beyond this point were not supplied in the report. */
+Plotly.newPlot("map",[{
+  type:"scattergeo",
+  mode:"markers+text",
+  lat:[28.6139],
+  lon:[77.2090],
+  text:["New Delhi — 5,473 restaurants"],
+  textposition:"top center",
+  marker:{size:22,color:BLUE},
+  hovertemplate:"New Delhi<br>Restaurants: 5,473<extra></extra>"
+}],{
+  paper_bgcolor:"#000",
+  plot_bgcolor:"#000",
+  margin:{l:0,r:0,t:0,b:0},
+  geo:{
+    bgcolor:"#000",
+    showland:true,
+    landcolor:"#303030",
+    showocean:true,
+    oceancolor:"#101010",
+    showcountries:true,
+    countrycolor:"#555",
+    showcoastlines:true,
+    coastlinecolor:"#777",
+    projection:{type:"natural earth"}
+  }
+},{displayModeBar:false,responsive:true});
+
+/* Tabs */
+function showSection(id,button){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+  button.classList.add("active");
+  setTimeout(()=>window.dispatchEvent(new Event("resize")),50);
+}
+setInterval(()=>{const el=document.getElementById("liveStatus");if(el)el.textContent="● LIVE • "+new Date().toLocaleTimeString();},1000);
+</script>
+</body>
+</html>
